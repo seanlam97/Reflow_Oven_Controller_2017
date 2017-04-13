@@ -7,8 +7,9 @@
  *         University of British Columbia)
  */
 
+// LCD pin assignments
 #define LCD_RS 7
-#define LCD_RW 8 // Not used in this code
+#define LCD_RW 8
 #define LCD_E  9
 #define LCD_D4 10
 #define LCD_D5 11
@@ -16,15 +17,8 @@
 #define LCD_D7 13
 #define CHARS_PER_LINE 16
 
-// Pins
-
-// Variables
-
-// Function Prototypes
-
-
 void setup() {
-  // put your setup code here, to run once:
+  // Set digital pins on Arduino as output 
   pinMode(LCD_RS, OUTPUT);
   pinMode(LCD_RW, OUTPUT);
   pinMode(LCD_E, OUTPUT);
@@ -35,7 +29,6 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   int flag = 0;
   LCD_4BIT();
 
@@ -43,7 +36,7 @@ void loop() {
   {
     if(flag==0)
     {
-      LCDprint("name", 1, 0);
+      LCDprint("name", 1, 0); // print to LCD
       flag = 1;
     }
   }
@@ -87,7 +80,7 @@ void WriteCommand (unsigned char x)
 
 void LCD_4BIT (void)
 {
-  digitalWrite(LCD_E, LOW); // Resting state of LCD's enable is zero
+  digitalWrite(LCD_E, LOW); // Resting state of LCD's enable pin is zero
   digitalWrite(LCD_RW, LOW); // We are only writing to the LCD in this program
   delay(20);
   // First make sure the LCD is in 8-bit mode and then change to 4-bit mode
