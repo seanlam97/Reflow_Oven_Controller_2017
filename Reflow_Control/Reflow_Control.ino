@@ -23,6 +23,14 @@
 #define LCD_D7 13
 #define CHARS_PER_LINE 16
 
+// Variables
+char BUFF[CHARS_PER_LINE];
+int soak_temp, soak_time, reflow_temp, reflow_time;
+int soak_temp_ones, soak_temp_tens, soak_temp_hundreds;
+int reflow_temp_ones, reflow_temp_tens, reflow_temp_hundreds;
+int soak_time_mins, soak_time_secs;
+int reflow_time_mins, reflow_time_secs;
+
 void setup() {
   // Set digital pins 7 - 13 on Arduino as output to LCD
   pinMode(LCD_RS, OUTPUT);
@@ -41,35 +49,165 @@ void setup() {
 }
 
 void loop() {
-  int flag = 0;
-  int BUT1, BUT2, BUT3, BUT4;
+  int state;
+  int select_parameter;
+
+
+  // Initialise 
   LCD_4BIT();
 
+  LCDprint("REFLOW OVEN", 1, 1);
+  LCDprint("CONTROLLER V1.0", 2, 1);
+  delay(2000);
+  clear_LCD();
+
+  // Initialize variable for "SELECT REFLOW PROFILE" state
+  state = 0;
+  soak_temp = 0;
+  soak_time = 0;
+  reflow_temp = 0;
+  reflow_time = 0;
+  
+  soak_temp_ones = 0;
+  soak_temp_tens = 0;
+  soak_temp_hundreds = 0;
+  
+  reflow_temp_ones = 0;
+  reflow_temp_tens = 0;
+  reflow_temp_hundreds = 0;
+  
+  soak_time_mins = 0;
+  soak_time_secs = 0;
+  
+  reflow_time_mins = 0;
+  reflow_time_secs = 0;
+  
+ /* while(!(digitalRead(PUSH1)))
+  {
+    LCDprint("Push 1 to start", 1, 1);
+  }
+  */
+  
   while(1)
   {
-    if(digitalRead(PUSH1))
+    /********** STATE 0: SELECT REFLOW PROFILE ****************/
+    select_parameter = 0;
+    while(state == 0)
     {
-      LCDprint("Sean", 1, 1);
-    }
-    else if(digitalRead(PUSH2))
-    {
-      LCDprint("Bob", 1, 1);
-    }
-    else if(digitalRead(PUSH3))
-    {
-      LCDprint("Tom", 1, 1);
-    }
-    else if(digitalRead(PUSH4))
-    {
-      LCDprint("Luna", 1, 1);
-    }
-    else
-    {
-      LCDprint("NOTHING", 2, 0);
+      if(select_parameter == 0)
+      { // Select Soak Temperature
+        select_parameter = Select_Soak_Temp();
+      }
+      else if(select_parameter == 1)
+      { // Select Soak Time
+        select_parameter = Select_Soak_Time();
+      }
+      else if(select_parameter == 2)
+      { // Select Reflow Temperature
+        while(1){
+          LCDprint("bob", 1, 1);
+        }
+      }
+      else if(select_parameter == 3)
+      { // Select Reflow Time
+        
+      }
+      
     }
   }
 }
 
+/****** REFLOW PROCESS FUNCTIONS ******/
+int Select_Soak_Temp(void)
+{
+  int set_select_parameter = 0;
+  
+  // Add digits
+  soak_temp = (soak_temp_hundreds*100) + (soak_temp_tens*10) + soak_temp_ones;
+  sprintf(BUFF, "%d deg C", soak_temp);
+
+  // Display selected soak temperature
+  LCDprint("Soak Temperature", 1, 1);
+  LCDprint(BUFF, 2, 1);
+
+  if(digitalRead(PUSH1))
+  {
+    delay(100);
+    soak_temp_hundreds = soak_temp_hundreds + 1;
+    if(soak_temp_hundreds == 10)
+    { // overflow handling
+      soak_temp_hundreds = 0;
+    }
+  }
+  else if(digitalRead(PUSH2))
+  {
+    delay(100);
+    soak_temp_tens = soak_temp_tens + 1;
+    if(soak_temp_tens == 10)
+    { // overflow handling
+      soak_temp_tens = 0;
+    }
+  }
+  else if(digitalRead(PUSH3))
+  {
+    delay(100);
+    soak_temp_ones = soak_temp_ones + 1;
+    if(soak_temp_ones == 10)
+    { // overflow handling
+      soak_temp_hundreds = 0;
+    }
+  }
+  else if(digitalRead(PUSH4))
+  {
+    delay(100);
+    set_select_parameter = 1;
+    clear_LCD();
+  }
+
+  return set_select_parameter;
+}
+
+int Select_Soak_Time(void)
+{
+  int set_select_parameter = 1;
+  
+  soak_time = (soak_time_mins*60) + soak_time_secs;
+
+  sprintf(BUFF, "%d mins %d secs", soak_time_mins, soak_time_secs);
+  LCDprint("Soak Time", 1, 1);
+  LCDprint(BUFF, 2, 1);
+
+  if(digitalRead(PUSH1))
+  {
+    delay(50);
+    soak_time_mins = soak_time_mins + 1;
+    if(soak_time_mins == 20)
+    { // overflow handling
+      soak_time_mins = 0;
+    }
+  }
+  else if(digitalRead(PUSH2))
+  {
+    delay(50);
+    soak_time_secs = soak_time_secs + 1;
+    if(soak_time_secs == 60)
+    { // overflow handling
+      soak_time_secs = 0;
+    }
+  }
+  else if(digitalRead(PUSH4))
+  {
+    delay(100);
+    set_select_parameter = 2;
+    clear_LCD();
+  }
+  
+  return set_select_parameter;
+}
+
+
+
+/****** LCD FUNCTIONS ******/
 void LCD_pulse (void)
 {
   digitalWrite(LCD_E, HIGH);
@@ -131,5 +269,11 @@ void LCDprint(char * string, unsigned char line, int clear_yn)
   delay(5);
   for(j=0; string[j]!=0; j++) WriteData(string[j]);// Write the message
   if(clear_yn) for(; j<CHARS_PER_LINE; j++) WriteData(' '); // Clear the rest of the line
+}
+
+void clear_LCD(void)
+{
+  LCDprint(" ", 1, 1);
+  LCDprint(" ", 2, 1);
 }
 
