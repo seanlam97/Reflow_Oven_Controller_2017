@@ -82,12 +82,6 @@ void loop() {
   reflow_time_mins = 0;
   reflow_time_secs = 0;
   
- /* while(!(digitalRead(PUSH1)))
-  {
-    LCDprint("Push 1 to start", 1, 1);
-  }
-  */
-  
   while(1)
   {
     /********** STATE 0: SELECT REFLOW PROFILE ****************/
@@ -112,12 +106,21 @@ void loop() {
       }
       else if(select_parameter == 4)
       {
-        while(1)
+        state = Start_Reflow_YN();
+        if(state == 0)
         {
-          LCDprint("bob", 1, 1);
+          select_parameter = 0;
         }
       }
-      
+    }
+
+    /********** STATE 1: SOAK TEMPERATURE ****************/
+    while(state == 1)
+    {
+      while(1)
+      {
+        LCDprint("bob", 1,1);
+      }
     }
   }
 }
@@ -315,6 +318,31 @@ int Select_Reflow_Time(void)
   }
   
   return set_select_parameter;
+}
+
+int Start_Reflow_YN(void)
+{
+  int next_state;
+
+  while(1)
+  {
+    LCDprint("1: Go Back", 1, 1);
+    LCDprint("4: Start Reflow", 2, 1);
+    if(digitalRead(PUSH1))
+    {
+      delay(50);
+      next_state = 0;
+      break;
+    }
+    else if(digitalRead(PUSH4))
+    {
+      delay(50);
+      next_state = 1;
+      break;
+    }
+  }
+
+  return next_state;
 }
 
 
