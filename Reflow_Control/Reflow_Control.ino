@@ -104,20 +104,27 @@ void loop() {
       }
       else if(select_parameter == 2)
       { // Select Reflow Temperature
-        while(1){
-          LCDprint("bob", 1, 1);
-        }
+        select_parameter = Select_Reflow_Temp();
       }
       else if(select_parameter == 3)
       { // Select Reflow Time
-        
+        select_parameter = Select_Reflow_Time();
+      }
+      else if(select_parameter == 4)
+      {
+        while(1)
+        {
+          LCDprint("bob", 1, 1);
+        }
       }
       
     }
   }
 }
 
-/****** REFLOW PROCESS FUNCTIONS ******/
+/****************************************************/
+/************ REFLOW PROCESS FUNCTIONS **************/
+/****************************************************/
 int Select_Soak_Temp(void)
 {
   int set_select_parameter = 0;
@@ -181,7 +188,7 @@ int Select_Soak_Time(void)
   {
     delay(50);
     soak_time_mins = soak_time_mins + 1;
-    if(soak_time_mins == 20)
+    if(soak_time_mins == 10)
     { // overflow handling
       soak_time_mins = 0;
     }
@@ -195,6 +202,15 @@ int Select_Soak_Time(void)
       soak_time_secs = 0;
     }
   }
+  else if(digitalRead(PUSH3))
+  {
+    delay(50);
+    soak_time_secs = soak_time_secs - 1;
+    if(soak_time_secs == -1)
+    { // overflow handling
+      soak_time_secs = 59;
+    }
+  }
   else if(digitalRead(PUSH4))
   {
     delay(100);
@@ -205,9 +221,107 @@ int Select_Soak_Time(void)
   return set_select_parameter;
 }
 
+int Select_Reflow_Temp(void)
+{
+  int set_select_parameter = 2;
+  
+  // Add digits
+  reflow_temp = (reflow_temp_hundreds*100) + (reflow_temp_tens*10) + reflow_temp_ones;
+  sprintf(BUFF, "%d deg C", reflow_temp);
+
+  // Display selected soak temperature
+  LCDprint("Reflow Temp.", 1, 1);
+  LCDprint(BUFF, 2, 1);
+
+  if(digitalRead(PUSH1))
+  {
+    delay(100);
+    reflow_temp_hundreds = reflow_temp_hundreds + 1;
+    if(reflow_temp_hundreds == 10)
+    { // overflow handling
+      reflow_temp_hundreds = 0;
+    }
+  }
+  else if(digitalRead(PUSH2))
+  {
+    delay(100);
+    reflow_temp_tens = reflow_temp_tens + 1;
+    if(reflow_temp_tens == 10)
+    { // overflow handling
+      reflow_temp_tens = 0;
+    }
+  }
+  else if(digitalRead(PUSH3))
+  {
+    delay(100);
+    reflow_temp_ones = reflow_temp_ones + 1;
+    if(reflow_temp_ones == 10)
+    { // overflow handling
+      reflow_temp_hundreds = 0;
+    }
+  }
+  else if(digitalRead(PUSH4))
+  {
+    delay(100);
+    set_select_parameter = 3;
+    clear_LCD();
+  }
+
+  return set_select_parameter;
+}
+
+int Select_Reflow_Time(void)
+{
+  int set_select_parameter = 3;
+  
+  reflow_time = (reflow_time_mins*60) + reflow_time_secs;
+
+  sprintf(BUFF, "%d mins %d secs", reflow_time_mins, reflow_time_secs);
+  LCDprint("Reflow Time", 1, 1);
+  LCDprint(BUFF, 2, 1);
+
+  if(digitalRead(PUSH1))
+  {
+    delay(50);
+    reflow_time_mins = reflow_time_mins + 1;
+    if(reflow_time_mins == 10)
+    { // overflow handling
+      reflow_time_mins = 0;
+    }
+  }
+  else if(digitalRead(PUSH2))
+  {
+    delay(50);
+    reflow_time_secs = reflow_time_secs + 1;
+    if(reflow_time_secs == 60)
+    { // overflow handling
+      reflow_time_secs = 0;
+    }
+  }
+  else if(digitalRead(PUSH3))
+  {
+    delay(50);
+    reflow_time_secs = reflow_time_secs - 1;
+    if(reflow_time_secs == -1)
+    { // overflow handling
+      reflow_time_secs = 59;
+    }
+  }
+  else if(digitalRead(PUSH4))
+  {
+    delay(100);
+    set_select_parameter = 4;
+    clear_LCD();
+  }
+  
+  return set_select_parameter;
+}
 
 
-/****** LCD FUNCTIONS ******/
+
+/****************************************************/
+/***************** LCD FUNCTIONS ********************/
+/****************************************************/
 void LCD_pulse (void)
 {
   digitalWrite(LCD_E, HIGH);
