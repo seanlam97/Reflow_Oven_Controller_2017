@@ -31,6 +31,7 @@ int sensorPin = A0;    // select the input pin for the potentiometer
 int ledPin = 13;      // select the pin for the LED
 double sensorValue = 0;  // variable to store the value coming from the sensor
 double temperature;
+int i;
 
 void setup() {
   // declare the ledPin as an OUTPUT:
@@ -42,8 +43,8 @@ void loop() {
 
   // read the value from the sensor:
   sensorValue = analogRead(sensorPin);
-
-  temperature = sensorValue/1.9 + 19.0;
+  
+  temperature = sensorValue/2.7 + 20.0;
   
   // turn the ledPin on
   Serial.println(temperature);

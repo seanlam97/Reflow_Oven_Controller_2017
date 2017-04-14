@@ -7,6 +7,8 @@
  *         University of British Columbia)
  */
 
+#define SSR_PIN 2
+
 // Pushbutton pin assignments
 #define PUSH1 3
 #define PUSH2 4
@@ -30,6 +32,8 @@ int soak_temp_ones, soak_temp_tens, soak_temp_hundreds;
 int reflow_temp_ones, reflow_temp_tens, reflow_temp_hundreds;
 int soak_time_mins, soak_time_secs;
 int reflow_time_mins, reflow_time_secs;
+double temperature;
+int sensorPin = A0; 
 
 void setup() {
   // Set digital pins 7 - 13 on Arduino as output to LCD
@@ -41,11 +45,15 @@ void setup() {
   pinMode(LCD_D6, OUTPUT);
   pinMode(LCD_D7, OUTPUT);
 
+  pinMode(SSR_PIN, OUTPUT);
+
   // Set digital pins 3 - 6 on Arduino as pushbutton inputs
   pinMode(PUSH1, INPUT);
   pinMode(PUSH2, INPUT);
   pinMode(PUSH3, INPUT);
   pinMode(PUSH4, INPUT);
+
+  digitalWrite(SSR_PIN, LOW);
 }
 
 void loop() {
@@ -117,10 +125,19 @@ void loop() {
     /********** STATE 1: SOAK TEMPERATURE ****************/
     while(state == 1)
     {
-      while(1)
+      digitalWrite(SSR_PIN, HIGH);
+      temperature = analogRead(sensorPin)/1.9 + 19.0;
+      
+      if(temperature > (soak_temp - 5))
       {
-        LCDprint("bob", 1,1);
-      }
+        state = 2;
+      }     
+    }
+
+    /************** STATE 1: SOAK TIME ******************/
+    while(state == 2)
+    {
+       digitalWrite(SSR_PIN, LOW);
     }
   }
 }
