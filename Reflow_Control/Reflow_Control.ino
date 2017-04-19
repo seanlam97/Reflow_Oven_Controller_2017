@@ -4,10 +4,13 @@
  * Purpose: Control reflow process by selecting temperatures and times
  * NOTE: LCD Code has been adapted from Dr. Jesus Calvino-Fraga from ELEC 291
  *        (a project course for 2nd year electrical engineers at the 
- *         University of British Columbia)
+ *         University of British Columbia). 
  */
 
+#include "Timer.h"  //http://github.com/JChristensen/Timer
+ 
 #define SSR_PIN 2
+#define COOL_TEMP 60
 
 // Pushbutton pin assignments
 #define PUSH1 3
@@ -25,6 +28,9 @@
 #define LCD_D7 13
 #define CHARS_PER_LINE 16
 
+// Timer object
+Timer t;
+
 // Variables
 char BUFF[CHARS_PER_LINE];
 int soak_temp, soak_time, reflow_temp, reflow_time;
@@ -32,8 +38,10 @@ int soak_temp_ones, soak_temp_tens, soak_temp_hundreds;
 int reflow_temp_ones, reflow_temp_tens, reflow_temp_hundreds;
 int soak_time_mins, soak_time_secs;
 int reflow_time_mins, reflow_time_secs;
-double temperature;
-int sensorPin = A0; 
+double temperature, reading_1, reading_2;
+int sensorPin = A0;
+int state;
+int select_parameter; 
 
 void setup() {
   // Set digital pins 7 - 13 on Arduino as output to LCD
@@ -45,7 +53,9 @@ void setup() {
   pinMode(LCD_D6, OUTPUT);
   pinMode(LCD_D7, OUTPUT);
 
+  // Set up SSR pin and turn off oven
   pinMode(SSR_PIN, OUTPUT);
+  digitalWrite(SSR_PIN, LOW);  
 
   // Set digital pins 3 - 6 on Arduino as pushbutton inputs
   pinMode(PUSH1, INPUT);
@@ -53,13 +63,21 @@ void setup() {
   pinMode(PUSH3, INPUT);
   pinMode(PUSH4, INPUT);
 
-  digitalWrite(SSR_PIN, LOW);
+  // Set up serial port with 9600 baud rate
+  Serial.begin(9600);
+
+  // Set up time decrement
+  int tickEvent1 = t.every(990, decrementSoakTime);
+  Serial.print("1 second tick started id=");
+  Serial.println(tickEvent1);
+
+  int tickEvent2 = t.every(990, decrementReflowTime);
+  Serial.print("1 second tick started id=");
+  Serial.println(tickEvent2);
 }
 
 void loop() {
-  int state;
-  int select_parameter;
-
+  int i;
 
   // Initialise 
   LCD_4BIT();
@@ -126,18 +144,93 @@ void loop() {
     while(state == 1)
     {
       digitalWrite(SSR_PIN, HIGH);
-      temperature = analogRead(sensorPin)/1.9 + 19.0;
+      temperature = analogRead(sensorPin)/2.7 + 20.0;
+      displayTemperature(temperature, state);
       
-      if(temperature > (soak_temp - 5))
+      if(temperature > (soak_temp))
       {
         state = 2;
       }     
     }
 
-    /************** STATE 1: SOAK TIME ******************/
+    /************** STATE 2: SOAK TIME ******************/
     while(state == 2)
     {
-       digitalWrite(SSR_PIN, LOW);
+      temperature = analogRead(sensorPin)/2.7 + 20.0;
+      displayTemperature(temperature, state);
+     
+      t.update();
+
+      if(temperature > soak_temp)
+      {
+        digitalWrite(SSR_PIN, LOW);
+      }
+      else
+      {
+        digitalWrite(SSR_PIN, HIGH);
+      }
+
+      if(soak_time <= 0)
+      {
+        state = 3;
+      }
+    }
+
+    /************** STATE 3: REFLOW TEMPERATURE ******************/
+    while(state == 3)
+    {
+      digitalWrite(SSR_PIN, HIGH);
+      temperature = analogRead(sensorPin)/2.7 + 20.0;
+      displayTemperature(temperature, state);
+      
+      if(temperature > reflow_temp)
+      {
+        state = 4;
+      }     
+    }
+
+    /************** STATE 4: REFLOW TIME ******************/
+    while(state == 4)
+    {
+      temperature = analogRead(sensorPin)/2.7 + 20.0;
+      displayTemperature(temperature, state);
+     
+      t.update();
+
+      if(temperature > reflow_temp)
+      {
+        digitalWrite(SSR_PIN, LOW);
+      }
+      else
+      {
+        digitalWrite(SSR_PIN, HIGH);
+      }
+
+      if(reflow_time <= 0)
+      {
+        state = 5;
+      }
+    }
+
+    /************** STATE 5: COOLING ******************/
+    while(state == 5)
+    {
+      temperature = analogRead(sensorPin)/2.7 + 20.0;
+      displayTemperature(temperature, state);
+      digitalWrite(SSR_PIN, LOW);
+
+      if(temperature < COOL_TEMP)
+      {
+        state = 0;
+        for(i = 0; i < 15; i++)
+        {
+          LCDprint("DONE DONE DONE", 1, 1);
+          LCDprint("DONE DONE DONE", 2, 1);
+          delay(500);
+          clear_LCD();
+          delay(500);
+        }
+      }
     }
   }
 }
@@ -362,7 +455,96 @@ int Start_Reflow_YN(void)
   return next_state;
 }
 
+void displayTemperature(int temperature, int state)
+{
+  if(state == 1)
+  { // Soak Temperature
+    sprintf(BUFF, "%d C Soak Temp", soak_temp);
+    LCDprint(BUFF, 1, 1);
+  }
+  else if(state == 2)
+  { // Soak Time: Includes logic to add a 0 in front of the time for aesthetics
+    if(soak_time/60 < 10)
+    {
+      if( (soak_time - (soak_time/60)*60) < 10)
+      {
+        sprintf(BUFF, "0%d:0%d Soak Time", soak_time/60, soak_time - (soak_time/60)*60);
+      }
+      else
+      {
+        sprintf(BUFF, "0%d:%d Soak Time", soak_time/60, soak_time - (soak_time/60)*60);
+      }
+    }
+    else
+    {
+      if((soak_time - (soak_time/60)*60) < 10)
+      {
+        sprintf(BUFF, "%d:0%d Soak Time", soak_time/60, soak_time - (soak_time/60)*60);
+      }
+      else
+      {
+        sprintf(BUFF, "%d:%d Soak Time", soak_time/60, soak_time - (soak_time/60)*60);
+      }
+    }
+    LCDprint(BUFF, 1, 1);
+  }
+  else if(state == 3)
+  { // Reflow Temperature
+    sprintf(BUFF, "%d C Refl. Temp", reflow_temp);
+    LCDprint(BUFF, 1, 1);
+  }
+  else if(state == 4)
+  { // Reflow Time
+    if(reflow_time/60 < 10)
+    {
+      if( (reflow_time - (reflow_time/60)*60) < 10)
+      {
+        sprintf(BUFF, "0%d:0%d Refl. Time", reflow_time/60, reflow_time - (reflow_time/60)*60);
+      }
+      else
+      {
+        sprintf(BUFF, "0%d:%d Refl. Time", reflow_time/60, reflow_time - (reflow_time/60)*60);
+      }
+    }
+    else
+    {
+      if((reflow_time - (reflow_time/60)*60) < 10)
+      {
+        sprintf(BUFF, "%d:0%d Refl. Time", reflow_time/60, reflow_time - (reflow_time/60)*60);
+      }
+      else
+      {
+        sprintf(BUFF, "%d:%d Refl. Time", reflow_time/60, soak_time - (reflow_time/60)*60);
+      }
+    }
+    LCDprint(BUFF, 1, 1);
+  }
+  else if(state == 5)
+  { // Cooling
+     sprintf(BUFF, "%d C Cool Temp", COOL_TEMP);
+     LCDprint(BUFF, 1, 1);
+  }
 
+    // Print current temperature on second line
+    sprintf(BUFF, "%d C Curr. Temp", temperature);
+    LCDprint(BUFF, 2, 1);
+}
+
+void decrementSoakTime()
+{
+  if(state == 2)
+  {
+    soak_time = soak_time - 1;
+  }
+}
+
+void decrementReflowTime()
+{
+  if(state == 4)
+  {
+    reflow_time = reflow_time - 1;
+  }
+}
 
 /****************************************************/
 /***************** LCD FUNCTIONS ********************/
