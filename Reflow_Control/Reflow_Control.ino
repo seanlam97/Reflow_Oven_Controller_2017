@@ -28,6 +28,10 @@
 #define LCD_D7 13
 #define CHARS_PER_LINE 16
 
+// Beeper
+#define BEEP_PIN 19
+#define BEEP_PERIOD 250
+
 // Timer object
 Timer t;
 
@@ -63,6 +67,9 @@ void setup() {
   pinMode(PUSH3, INPUT);
   pinMode(PUSH4, INPUT);
 
+  // Set digital pin 19 as beeper output
+  pinMode(BEEP_PIN, OUTPUT);
+  
   // Set up serial port with 9600 baud rate
   Serial.begin(9600);
 
@@ -140,6 +147,8 @@ void loop() {
       }
     }
 
+    Beep_Milli_Secs(300);
+    
     /********** STATE 1: SOAK TEMPERATURE ****************/
     while(state == 1)
     {
@@ -152,6 +161,8 @@ void loop() {
         state = 2;
       }     
     }
+
+    Beep_Milli_Secs(300);
 
     /************** STATE 2: SOAK TIME ******************/
     while(state == 2)
@@ -176,6 +187,8 @@ void loop() {
       }
     }
 
+    Beep_Milli_Secs(300);
+
     /************** STATE 3: REFLOW TEMPERATURE ******************/
     while(state == 3)
     {
@@ -188,6 +201,8 @@ void loop() {
         state = 4;
       }     
     }
+
+    Beep_Milli_Secs(300);
 
     /************** STATE 4: REFLOW TIME ******************/
     while(state == 4)
@@ -212,6 +227,8 @@ void loop() {
       }
     }
 
+    Beep_Milli_Secs(1000);
+    
     /************** STATE 5: COOLING ******************/
     while(state == 5)
     {
@@ -222,13 +239,13 @@ void loop() {
       if(temperature < COOL_TEMP)
       {
         state = 0;
-        for(i = 0; i < 15; i++)
+        for(i = 0; i < 60; i++)
         {
           LCDprint("DONE DONE DONE", 1, 1);
           LCDprint("DONE DONE DONE", 2, 1);
-          delay(500);
+          Beep_Milli_Secs(500);
           clear_LCD();
-          delay(500);
+          Beep_Milli_Secs(500);
         }
       }
     }
@@ -528,6 +545,23 @@ void displayTemperature(int temperature, int state)
     // Print current temperature on second line
     sprintf(BUFF, "%d C Curr. Temp", temperature);
     LCDprint(BUFF, 2, 1);
+}
+
+void Beep_Milli_Secs(int milli_secs)
+{
+  int i;
+
+  for(i = 0; i < milli_secs; i++)
+  {
+    digitalWrite(BEEP_PIN, HIGH);
+    delayMicroseconds(BEEP_PERIOD);
+    digitalWrite(BEEP_PIN, LOW);
+    delayMicroseconds(BEEP_PERIOD);
+    digitalWrite(BEEP_PIN, HIGH);
+    delayMicroseconds(BEEP_PERIOD);
+    digitalWrite(BEEP_PIN, LOW);
+    delayMicroseconds(BEEP_PERIOD);
+  }
 }
 
 void decrementSoakTime()
